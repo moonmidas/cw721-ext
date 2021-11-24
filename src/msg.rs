@@ -35,7 +35,6 @@ pub struct InstantiateMsg {
     pub limit_per_address: u64,
     // maximum number of nfts this contract is allowed to mint
     // so owner cannot dilute the supply
-    pub nft_limit: u64,
     // lootbox info
     pub names: Vec<String>,
     pub origins: Vec<String>,

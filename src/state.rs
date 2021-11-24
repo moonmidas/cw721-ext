@@ -1,7 +1,7 @@
 use cosmwasm_std::{Empty, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cw_storage_plus::{Item};
+use cw_storage_plus::{Item, Map};
 
 
 pub type LootopiaNFTContract<'a> = cw721_base::Cw721Contract<'a, Extension, Empty>;
@@ -34,9 +34,7 @@ pub struct Config {
     pub payment_token: String,
     pub price: Uint128,
     pub treasury: String,
-    pub limit_per_address: u64,
-    pub nft_limit: u64,
-}
+    pub limit_per_address: u64,}
 
 
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -55,3 +53,5 @@ pub struct Loot {
 }
 
 pub const LOOT: Item<Loot> = Item::new("loot");
+
+pub const MINTS_BY_ADDRESS: Map<&[u8], Vec<u64>> = Map::new("mints_by_address");

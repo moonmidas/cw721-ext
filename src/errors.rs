@@ -31,6 +31,9 @@ pub enum ContractError {
 
     #[error("Maximum number of tokens have minted")]
     MaxTokensMinted {},
+
+    #[error("This wallet has exceeded its mint limit")]
+    MaxMintsPerAddress {},
 }
 
 impl From<CW721ContractError> for ContractError {

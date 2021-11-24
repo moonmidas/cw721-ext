@@ -7,7 +7,7 @@ use cw20::{Cw20ReceiveMsg};
 pub use cw721_base::{MinterResponse};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg, ReceiveMsg, MintMsg};
 use crate::errors::ContractError;
-use crate::state::{Config, CONFIG, Loot, LOOT, Metadata, Trait};
+use crate::state::{Config, CONFIG, Loot, LOOT, Metadata, Trait, MINTS_BY_ADDRESS};
 use terraswap::asset::{Asset, AssetInfo};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -39,7 +39,6 @@ pub fn instantiate(
         price: msg.price,
         treasury: msg.treasury.clone(),
         limit_per_address: msg.limit_per_address,
-        nft_limit: msg.nft_limit,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -132,54 +131,65 @@ pub fn execute_buy(
     if loot.curr_num_items > loot.num_items {
         return Err(ContractError::MaxTokensMinted {});
     }
+
+    let mut by_address = MINTS_BY_ADDRESS
+    .load(deps.storage, &buyer.as_bytes())
+    .unwrap_or(vec![]);
+
+
+    if by_address.len() == config.limit_per_address as usize {
+        return Err(ContractError::MaxMintsPerAddress {});
+    }
+    by_address.push(loot.curr_num_items);
+    MINTS_BY_ADDRESS.save(deps.storage, buyer.as_bytes(), &by_address)?;
     // pick random name
-        let rng_seed = &[
-            info.sender.to_string().as_bytes(),
-            env.block.height.to_string().as_bytes(),
-        ]
-        .concat();
-        let hash = get_hash(&rng_seed);
-        // pick random
-        let selected_name = loot
-            .names
-            .get((hash % loot.names.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_origin = loot
-            .origins
-            .get((hash % loot.origins.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_profession = loot
-            .professions
-            .get((hash % loot.professions.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_obsession = loot
-            .obsessions
-            .get((hash % loot.obsessions.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_talent = loot
-            .talents
-            .get((hash % loot.talents.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_skill = loot
-            .skills
-            .get((hash % loot.skills.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        let selected_alignment = loot
-            .alignments
-            .get((hash % loot.alignments.len() as u64) as usize)
-            .ok_or(ContractError::Failed {})?;
-        // increase number of items
-        loot.curr_num_items += 1;
-        LOOT.save(deps.storage, &loot)?;
- 
-        info.sender = deps.api.addr_validate(&config.payment_token)?;
+    let rng_seed = &[
+        info.sender.to_string().as_bytes(),
+        env.block.height.to_string().as_bytes(),
+    ]
+    .concat();
+    let hash = get_hash(&rng_seed);
+    // pick random
+    let selected_name = loot
+        .names
+        .get((hash % loot.names.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_origin = loot
+        .origins
+        .get((hash % loot.origins.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_profession = loot
+        .professions
+        .get((hash % loot.professions.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_obsession = loot
+        .obsessions
+        .get((hash % loot.obsessions.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_talent = loot
+        .talents
+        .get((hash % loot.talents.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_skill = loot
+        .skills
+        .get((hash % loot.skills.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    let selected_alignment = loot
+        .alignments
+        .get((hash % loot.alignments.len() as u64) as usize)
+        .ok_or(ContractError::Failed {})?;
+    // increase number of items
+    loot.curr_num_items += 1;
+    LOOT.save(deps.storage, &loot)?;
+
+    info.sender = deps.api.addr_validate(&config.payment_token)?;
     
         // We need to construct the NFT mint message here.
  
-      mint_msg.owner = buyer;
-      mint_msg.token_id = loot.curr_num_items.to_string();
-      mint_msg.token_uri = Some(loot.curr_num_items.to_string());
-      let extension = Metadata { 
+    mint_msg.owner = buyer.clone();
+    mint_msg.token_id = loot.curr_num_items.to_string();
+    mint_msg.token_uri = Some(loot.curr_num_items.to_string());
+    let extension = Metadata { 
         name: Some(selected_name.clone()),
         image: None,
         animation_url: None,
@@ -220,12 +230,14 @@ pub fn execute_buy(
                 value: selected_alignment.clone(),
             },
         ]),
-      };
+    };
     mint_msg.extension = Some(extension);
     // if both ok, mint buyer a token
 
-    let cfg = CONFIG.load(deps.storage)?;
+    
+      // TO FIX:
 
+    let cfg = CONFIG.load(deps.storage)?;
     let to_withdraw = Asset {
         info: AssetInfo::Token {
                 contract_addr: cfg.payment_token.clone(),
@@ -233,9 +245,10 @@ pub fn execute_buy(
         amount: amount_sent.clone(),
     };
     let treasury = deps.api.addr_validate(&cfg.treasury)?;
-    Response::new().add_message(to_withdraw.into_msg(&deps.querier, treasury)?);
+    
+    let querier = deps.querier.clone();
     let response = cw721_contract.mint(deps, env, info, mint_msg)?;
-    Ok(response)
+    Ok(response.add_message(to_withdraw.into_msg(&querier, treasury)?))
 }
 
 
