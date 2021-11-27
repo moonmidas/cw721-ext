@@ -84,6 +84,7 @@ pub fn execute_update_name(
 ) -> Result<Response, ContractError> {
 
 }
+//
 */
 pub fn execute_update_all_metadata(
     deps: DepsMut,
