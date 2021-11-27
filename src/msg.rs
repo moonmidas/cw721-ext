@@ -44,6 +44,12 @@ pub struct InstantiateMsg {
     pub skills: Vec<String>,
     pub alignments: Vec<String>,
     pub num_items: u64,
+    // Enable or disable whitelist
+    pub whitelist: bool,
+    pub whitelist_admin: String,
+    
+    // General admin
+    pub admin: String,
 }
 
 impl From<InstantiateMsg> for CW721InstantiateMsg {
@@ -113,7 +119,28 @@ pub enum ExecuteMsg {
         },
 
         // create a reservation, and pay cost
-        ReserveNft {},
+        AddWhitelistAddresses {
+            addresses: Vec<String>,
+        },
+
+        ToggleWhitelist {
+            whitelist: bool,
+        },
+
+        SetWhitelistAdmin {
+            whitelist_admin: String,
+        },
+
+        // Set the admin
+        SetAdmin {
+            admin: String,
+        },
+
+        // Update token
+        UpdateAllMetadata {
+            token_id: String,
+            extension: Extension,
+        },
 
 }
 
@@ -165,7 +192,7 @@ pub enum ReceiveMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // Standard cw721 queries
@@ -194,6 +221,10 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     AllTokens {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    Whitelisted {
         start_after: Option<String>,
         limit: Option<u32>,
     }
@@ -245,6 +276,11 @@ impl From<QueryMsg> for CW721QueryMsg {
             _ => panic!("cannot covert {:?} to CW721QueryMsg", msg),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
+pub struct AllWhitelisted {
+    pub accounts: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

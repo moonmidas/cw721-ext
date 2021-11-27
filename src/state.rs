@@ -34,7 +34,11 @@ pub struct Config {
     pub payment_token: String,
     pub price: Uint128,
     pub treasury: String,
-    pub limit_per_address: u64,}
+    pub limit_per_address: u64,
+    pub whitelist: bool,
+    pub whitelist_admin: String,
+    pub admin: String,
+}
 
 
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -55,3 +59,4 @@ pub struct Loot {
 pub const LOOT: Item<Loot> = Item::new("loot");
 
 pub const MINTS_BY_ADDRESS: Map<&[u8], Vec<u64>> = Map::new("mints_by_address");
+pub const WHITELIST_BY_ADDRESS: Map<&[u8], Vec<u64>> = Map::new("whitelist_by_address");

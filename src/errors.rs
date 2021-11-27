@@ -34,6 +34,10 @@ pub enum ContractError {
 
     #[error("This wallet has exceeded its mint limit")]
     MaxMintsPerAddress {},
+
+    #[error("This wallet can't mint because it's not whitelisted")]
+    NotWhitelisted {},
+
 }
 
 impl From<CW721ContractError> for ContractError {
